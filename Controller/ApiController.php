@@ -64,11 +64,11 @@ final class ApiController extends Controller
                 $payload, $sig_header, $endpoint_secret
             );
         } catch(\UnexpectedValueException $e) {
-            $response->header->generate(400);
+            $response->header->status = 400;
 
             return;
         } catch(\Stripe\Exception\SignatureVerificationException $e) {
-            $response->header->generate(400);
+            $response->header->status = 400;
 
             return;
         }
