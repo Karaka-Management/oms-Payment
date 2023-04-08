@@ -14,9 +14,17 @@ declare(strict_types=1);
 
 namespace Modules\Payment\Controller;
 
+use Modules\Billing\Models\Attribute\BillAttributeMapper;
+use Modules\Billing\Models\Bill;
+use Modules\Billing\Models\BillMapper;
+use Modules\Billing\Models\BillPaymentStatus;
+use Modules\Billing\Models\BillStatus;
 use phpOMS\Autoloader;
+use phpOMS\Message\Http\HttpRequest;
+use phpOMS\Message\Http\HttpResponse;
 use phpOMS\Message\RequestAbstract;
 use phpOMS\Message\ResponseAbstract;
+use phpOMS\Uri\HttpUri;
 
 /**
  * Payment controller class.
@@ -28,6 +36,85 @@ use phpOMS\Message\ResponseAbstract;
  */
 final class ApiController extends Controller
 {
+
+    public function handlePaymentRequest(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : Bill
+    {
+        /** @var \Modules\Billing\Models\Attribute\BillAttribute $attr */
+        $attr = BillAttributeMapper::get()
+            ->with('type')
+            ->with('value')
+            ->where('type/name', 'external_payment_id')
+            ->where('value/valueStr', $request->getDataString('session_id') ?? '')
+            ->execute();
+
+        /** @var \Modules\Billing\Models\Bill $bill */
+        $bill = BillMapper::get()
+            ->with('client')
+            ->where('id', $attr->bill)
+            ->execute();
+
+        // @todo: handle different payment providers, currently only stripe handled
+        // idea: add a second attribute which defines the external_payment_provider, or use 2 values in the attribute e.g. valueInt contains the type of the payment provider?
+        $status = $this->getStripePaymentStatus($request->getDataString('session_id') ?? '');
+
+        // @todo: consider to have the bill as an offer and now turn it into an invoice. currently it's an invoice and now we need to update it instead of transfer it to an invoice
+        if ($status === BillPaymentStatus::PAID
+            && $bill->getPaymentStatus() !== BillPaymentStatus::PAID
+        ) {
+            $old = clone $bill;
+
+            $bill->setPaymentStatus(BillPaymentStatus::PAID);
+            $bill->setStatus(BillStatus::ARCHIVED);
+
+            $account = empty($request->header->account)
+                ? $bill->client->account->getId()
+                : $request->header->account;
+
+            $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
+
+            // @todo: move this out of here. This is only a special case.
+            // Even the temp implememntation is bad, as this should happen async in the Cli
+            $internalRequest = new HttpRequest(new HttpUri(''));
+            $internalResponse = new HttpResponse();
+
+            $internalRequest->header->account = $account;
+            $internalRequest->setData('bill', $bill->getId());
+
+            $this->app->moduleManager->get('Billing', 'Api')->apiBillPdfArchiveCreate($internalRequest, $internalResponse);
+        }
+
+        return $bill;
+    }
+
+    public function getStripePaymentStatus(string $sessionId) : int
+    {
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
+
+        $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
+
+        if (empty($api_key) || empty($endpoint_secret) || $include === false) {
+            return BillPaymentStatus::UNKNOWN;
+        }
+
+        Autoloader::addPath($include);
+
+        \Stripe\Stripe::setApiKey($api_key);
+
+        $session = \Stripe\Checkout\Session::retrieve($sessionId);
+
+        $status = $session->payment_status;
+
+        switch (\strtolower($status)) {
+            case 'paid':
+                return BillPaymentStatus::PAID;
+            case 'unpaid':
+                return BillPaymentStatus::UNPAID;
+            default:
+                return BillPaymentStatus::UNKNOWN;
+        }
+    }
+
     public function apiWebhook(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
         switch($request->getData('type')) {
@@ -41,7 +128,7 @@ final class ApiController extends Controller
         $api_key = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
 
-        $include = \realpath(__DIR__ . '/../../../Resources/');
+        $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
 
         if (empty($api_key) || empty($endpoint_secret) || $include === false) {
             return;
