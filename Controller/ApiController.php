@@ -36,10 +36,22 @@ use phpOMS\Uri\HttpUri;
  */
 final class ApiController extends Controller
 {
-
+    /**
+     * Handle payment processing request.
+     *
+     * E.g. customer pays via credit card, paypal, etc.
+     *
+     * @param RequestAbstract  $request  Request
+     * @param ResponseAbstract $response Response
+     * @param mixed            $data     Data
+     *
+     * @return Bill
+     *
+     * @since 1.0.0
+     */
     public function handlePaymentRequest(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : Bill
     {
-        /** @var \Modules\Billing\Models\Attribute\BillAttribute $attr */
+        /** @var \Modules\Attribute\Models\Attribute $attr */
         $attr = BillAttributeMapper::get()
             ->with('type')
             ->with('value')
@@ -50,7 +62,7 @@ final class ApiController extends Controller
         /** @var \Modules\Billing\Models\Bill $bill */
         $bill = BillMapper::get()
             ->with('client')
-            ->where('id', $attr->bill)
+            ->where('id', $attr->ref)
             ->execute();
 
         // @todo: handle different payment providers, currently only stripe handled
@@ -67,14 +79,14 @@ final class ApiController extends Controller
             $bill->setStatus(BillStatus::ARCHIVED);
 
             $account = empty($request->header->account)
-                ? $bill->client->account->getId()
+                ? (int) $bill->client?->account->getId()
                 : $request->header->account;
 
             $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
 
             // @todo: move this out of here. This is only a special case.
             // Even the temp implememntation is bad, as this should happen async in the Cli
-            $internalRequest = new HttpRequest(new HttpUri(''));
+            $internalRequest  = new HttpRequest(new HttpUri(''));
             $internalResponse = new HttpResponse();
 
             $internalRequest->header->account = $account;
@@ -86,6 +98,15 @@ final class ApiController extends Controller
         return $bill;
     }
 
+    /**
+     * Get payment status from stripe.
+     *
+     * @param string $sessionId Session id
+     *
+     * @return int BillPaymentStatus
+     *
+     * @since 1.0.0
+     */
     public function getStripePaymentStatus(string $sessionId) : int
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
@@ -125,7 +146,7 @@ final class ApiController extends Controller
 
     public function webhookStripe(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
-        $api_key = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
 
         $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
@@ -142,9 +163,9 @@ final class ApiController extends Controller
 
         //$endpoint_secret = '';
 
-        $payload = @file_get_contents('php://input');
+        $payload    = file_get_contents('php://input');
         $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
-        $event = null;
+        $event      = null;
 
         try {
             $event = \Stripe\Webhook::constructEvent(
