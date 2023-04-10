@@ -15,8 +15,6 @@ declare(strict_types=1);
 namespace Modules\Payment\Models;
 
 use Modules\Admin\Models\AccountExternal;
-use phpOMS\Account\AccountStatus;
-use phpOMS\Auth\LoginReturnType;
 use phpOMS\DataStorage\Database\Mapper\DataMapperFactory;
 use phpOMS\DataStorage\Database\Query\Builder;
 
@@ -27,6 +25,9 @@ use phpOMS\DataStorage\Database\Query\Builder;
  * @license OMS License 2.0
  * @link    https://jingga.app
  * @since   1.0.0
+ *
+ * @template T of Payment
+ * @extends DataMapperFactory<T>
  */
 class PaymentMapper extends DataMapperFactory
 {
@@ -66,7 +67,7 @@ class PaymentMapper extends DataMapperFactory
     /**
      * Model to use by the mapper.
      *
-     * @var class-string
+     * @var class-string<T>
      * @since 1.0.0
      */
     public const MODEL = Payment::class;
