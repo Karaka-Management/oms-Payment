@@ -14,9 +14,21 @@ declare(strict_types=1);
 
 namespace Modules\Payment\Controller;
 
+use Modules\Billing\Models\Attribute\BillAttributeMapper;
+use Modules\Billing\Models\Attribute\BillAttributeTypeMapper;
+use Modules\Billing\Models\Bill;
+use Modules\Billing\Models\BillMapper;
+use Modules\Billing\Models\BillPaymentStatus;
+use Modules\Billing\Models\BillStatus;
+use Modules\ItemManagement\Models\ItemMapper;
 use phpOMS\Autoloader;
+use phpOMS\Message\Http\HttpRequest;
+use phpOMS\Message\Http\HttpResponse;
+use phpOMS\Message\Http\RequestStatusCode;
 use phpOMS\Message\RequestAbstract;
 use phpOMS\Message\ResponseAbstract;
+use phpOMS\System\MimeType;
+use phpOMS\Uri\HttpUri;
 
 /**
  * Payment controller class.
@@ -28,6 +40,235 @@ use phpOMS\Message\ResponseAbstract;
  */
 final class ApiController extends Controller
 {
+    /**
+     * Handle payment processing request.
+     *
+     * E.g. customer pays via credit card, paypal, etc.
+     *
+     * @param RequestAbstract  $request  Request
+     * @param ResponseAbstract $response Response
+     * @param mixed            $data     Data
+     *
+     * @return Bill
+     *
+     * @since 1.0.0
+     */
+    public function handlePaymentRequest(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : Bill
+    {
+        /** @var \Modules\Attribute\Models\Attribute $attr */
+        $attr = BillAttributeMapper::get()
+            ->with('type')
+            ->with('value')
+            ->where('type/name', 'external_payment_id')
+            ->where('value/valueStr', $request->getDataString('session_id') ?? '')
+            ->execute();
+
+        /** @var \Modules\Billing\Models\Bill $bill */
+        $bill = BillMapper::get()
+            ->with('client')
+            ->where('id', $attr->ref)
+            ->execute();
+
+        // @todo: handle different payment providers, currently only stripe handled
+        // idea: add a second attribute which defines the external_payment_provider, or use 2 values in the attribute e.g. valueInt contains the type of the payment provider?
+        $status = $this->getStripePaymentStatus($request->getDataString('session_id') ?? '');
+
+        // @todo: consider to have the bill as an offer and now turn it into an invoice. currently it's an invoice and now we need to update it instead of transfer it to an invoice
+        if ($status === BillPaymentStatus::PAID
+            && $bill->getPaymentStatus() !== BillPaymentStatus::PAID
+        ) {
+            $old = clone $bill;
+
+            $bill->setPaymentStatus(BillPaymentStatus::PAID);
+            $bill->setStatus(BillStatus::ARCHIVED);
+
+            $account = empty($request->header->account)
+                ? (int) $bill->client?->account->getId()
+                : $request->header->account;
+
+            $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
+
+            // @todo: move this out of here. This is only a special case.
+            // Even the temp implememntation is bad, as this should happen async in the Cli
+            $internalRequest  = new HttpRequest(new HttpUri(''));
+            $internalResponse = new HttpResponse();
+
+            $internalRequest->header->account = $account;
+            $internalRequest->setData('bill', $bill->getId());
+
+            $this->app->moduleManager->get('Billing', 'Api')->apiBillPdfArchiveCreate($internalRequest, $internalResponse);
+        }
+
+        return $bill;
+    }
+
+    /**
+     * Get payment status from stripe.
+     *
+     * @param string $sessionId Session id
+     *
+     * @return int BillPaymentStatus
+     *
+     * @since 1.0.0
+     */
+    public function getStripePaymentStatus(string $sessionId) : int
+    {
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
+
+        $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
+
+        if (empty($api_key) || empty($endpoint_secret) || $include === false) {
+            return BillPaymentStatus::UNKNOWN;
+        }
+
+        Autoloader::addPath($include);
+
+        \Stripe\Stripe::setApiKey($api_key);
+
+        $session = \Stripe\Checkout\Session::retrieve($sessionId);
+        $status  = $session->payment_status;
+
+        switch (\strtolower($status)) {
+            case 'paid':
+                return BillPaymentStatus::PAID;
+            case 'unpaid':
+                return BillPaymentStatus::UNPAID;
+            default:
+                return BillPaymentStatus::UNKNOWN;
+        }
+    }
+
+    /**
+     * Create stripe checkout response
+     *
+     * @param RequestAbstract  $request  Request
+     * @param ResponseAbstract $response Response
+     * @param Bill             $bill     Bill
+     * @param mixed            $data     Generic data
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
+    public function setupStripe(
+        RequestAbstract $request,
+        ResponseAbstract $response,
+        Bill $bill,
+        mixed $data = null
+    ) : void
+    {
+        $session = $this->createStripeSession($bill, $data['success'], $data['cancel']);
+
+        // Assign payment id to bill
+        /** \Modules\Billing\Models\Attribute\BillAttributeType $type */
+        $type = BillAttributeTypeMapper::get()
+            ->where('name', 'external_payment_id')
+            ->execute();
+
+        $internalRequest  = new HttpRequest(new HttpUri(''));
+        $internalResponse = new HttpResponse();
+
+        $internalRequest->header->account = $request->header->account;
+        $internalRequest->setData('type', $type->getId());
+        $internalRequest->setData('custom', (string) $session->id);
+        $internalRequest->setData('bill', $bill->getId());
+        $this->app->moduleManager->get('Billing', 'ApiAttribute')->apiBillAttributeCreate($internalRequest, $internalResponse, $data);
+
+        // Redirect to stripe checkout page
+        $response->header->status = RequestStatusCode::R_303;
+        $response->header->set('Content-Type', MimeType::M_JSON, true);
+        $response->header->set('Location', $session->url, true);
+    }
+
+    /**
+     * Create stripe session
+     *
+     * @param Bill   $bill    Bill
+     * @param string $success Success url
+     * @param string $cancel  Cancel url
+     *
+     * @return \Stripe\Checkout\Session|null
+     *
+     * @since 1.0.0
+     */
+    private function createStripeSession(
+        Bill $bill,
+        string $success,
+        string $cancel
+    ) : ?\Stripe\Checkout\Session
+    {
+        // $this->app->appSettings->getEncrypted()
+
+        // $stripeSecretKeyTemp = $this->app->appSettings->get();
+        // $stripeSecretKey = $this->app->appSettings->decrypt($stripeSecretKeyTemp);
+
+        // \Stripe\Stripe::setApiKey($stripeSecretKey);
+
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
+
+        $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
+
+        if (empty($api_key) || empty($endpoint_secret) || $include === false) {
+            return null;
+        }
+
+        $isSubscription = false;
+        $elements       = $bill->getElements();
+
+        foreach ($elements as $element) {
+            $item = ItemMapper::get()
+                ->where('id', $element->item)
+                ->execute();
+
+            if ($item->getAttribute('subscription')->value->getValue() === 1) {
+                $isSubscription = true;
+                break;
+            }
+        }
+
+        Autoloader::addPath($include);
+
+        $stripeData = [
+            'line_items' => [],
+            'mode' => $isSubscription ? 'subscription' : 'payment',
+            'currency' => $bill->getCurrency(),
+            'success_url' => $success,
+            'cancel_url' => $cancel,
+            'client_reference_id' => $bill->number,
+           // 'customer' => 'stripe_customer_id...',
+            'customer_email' => $bill->client->account->getEmail(),
+        ];
+
+        foreach ($elements as $element) {
+            $stripeData['line_items'][] = [
+                'quantity' => 1,
+                'price_data' => [
+                    'tax_behavior' => 'inclusive',
+                    'currency' => $bill->getCurrency(),
+                    'unit_amount' => (int) ($element->totalSalesPriceGross->getInt() / 100),
+                    //'amount_subtotal' => (int) ($bill->netSales->getInt() / 100),
+                    //'amount_total' => (int) ($bill->grossSales->getInt() / 100),
+                    'product_data' => [
+                        'name' => $element->itemName,
+                        'metadata' => [
+                            'pro_id' => $element->itemNumber,
+                        ],
+                    ],
+                ]
+            ];
+        }
+
+        //$stripe = new \Stripe\StripeClient($api_key);
+        \Stripe\Stripe::setApiKey($api_key);
+
+        // @todo: instead of using account email, use client billing email if defined and only use account email as fallback
+        $session = \Stripe\Checkout\Session::create($stripeData);
+
+        return $session;
+    }
+
     public function apiWebhook(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
         switch($request->getData('type')) {
@@ -38,10 +279,10 @@ final class ApiController extends Controller
 
     public function webhookStripe(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
-        $api_key = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
 
-        $include = \realpath(__DIR__ . '/../../../Resources/');
+        $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
 
         if (empty($api_key) || empty($endpoint_secret) || $include === false) {
             return;
@@ -55,9 +296,9 @@ final class ApiController extends Controller
 
         //$endpoint_secret = '';
 
-        $payload = @file_get_contents('php://input');
+        $payload    = file_get_contents('php://input');
         $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
-        $event = null;
+        $event      = null;
 
         try {
             $event = \Stripe\Webhook::constructEvent(
