@@ -37,9 +37,26 @@ use phpOMS\Uri\HttpUri;
  * @license OMS License 2.0
  * @link    https://jingga.app
  * @since   1.0.0
+ * 
+ * @todo: split the different external apis into different controllers (stripe, paypal, sepa)
  */
 final class ApiController extends Controller
 {
+    public function cancelSubscription() : void
+    {
+        $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
+        $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
+
+        \Stripe\Stripe::setApiKey($api_key);
+
+        \Stripe\Subscription::update(
+            'sub_49ty4767H20z6a',
+            [
+                'cancel_at_period_end' => true,
+            ]
+        );
+    }
+
     /**
      * Handle payment processing request.
      *
@@ -273,6 +290,7 @@ final class ApiController extends Controller
     {
         switch($request->getData('type')) {
             case 'stripe':
+            default:
                 $this->webhookStripe($request, $response, $data);
         }
     }
@@ -281,8 +299,11 @@ final class ApiController extends Controller
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
+        $webhook = $_SERVER['OMS_STRIPE_WEBHOOK'] ?? '';
 
         $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
+
+        $response->header->set('Content-Type', MimeType::M_JSON, true);
 
         if (empty($api_key) || empty($endpoint_secret) || $include === false) {
             return;
@@ -294,21 +315,25 @@ final class ApiController extends Controller
 
         //$stripe = new \Stripe\StripeClient($api_key);
 
-        //$endpoint_secret = '';
-
         $payload    = file_get_contents('php://input');
         $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
         $event      = null;
 
         try {
             $event = \Stripe\Webhook::constructEvent(
-                $payload, $sig_header, $endpoint_secret
+                $payload, $sig_header, $webhook
             );
         } catch(\UnexpectedValueException $e) {
             $response->header->status = 400;
 
             return;
         } catch(\Stripe\Exception\SignatureVerificationException $e) {
+            $response->header->status = 400;
+
+            return;
+        }
+
+        if ($event === null) {
             $response->header->status = 400;
 
             return;
@@ -448,6 +473,7 @@ final class ApiController extends Controller
                 $subscription = $event->data->object;
                 break;
             case 'customer.subscription.deleted':
+                // @todo: subscription ended
                 $subscription = $event->data->object;
                 break;
             case 'customer.subscription.paused':
@@ -467,6 +493,9 @@ final class ApiController extends Controller
                 break;
             case 'customer.subscription.updated':
                 $subscription = $event->data->object;
+
+                // @todo: create invoice
+                // check if permissions and settings need to be changed
                 break;
             case 'customer.tax_id.created':
                 $taxId = $event->data->object;
@@ -529,12 +558,14 @@ final class ApiController extends Controller
                 $invoice = $event->data->object;
                 break;
             case 'invoice.paid':
+                // @todo: this is when a subscription is paid
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_action_required':
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_failed':
+                // @todo: change subscription
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_succeeded':
@@ -628,6 +659,16 @@ final class ApiController extends Controller
                 $paymentIntent = $event->data->object;
                 break;
             case 'payment_intent.succeeded':
+                // @todo: received payment (maybe the best solution for checking also subscriptions)
+
+                // get item id
+                // find item which has this id
+                // find user who purchased this item. how?
+                    // hopefully the payment intent also has a customer id or customer email
+                    // find customer by email/id
+                    // ideally find by id (this would be stored in the account_external table)
+                        // this means we need to store the customer id in the account_external table when the user makes his first payment ever
+
                 $paymentIntent = $event->data->object;
                 break;
             case 'payment_link.created':

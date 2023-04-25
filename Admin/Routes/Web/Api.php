@@ -21,7 +21,7 @@ return [
     '^.*/payment/webhook(\?.*|$)' => [
         [
             'dest'       => '\Modules\Payment\Controller\ApiController:apiWebhook',
-            'verb'       => RouteVerb::SET,
+            'verb'       => RouteVerb::ANY,
             'permission' => [
             ],
         ],

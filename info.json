@@ -28,7 +28,7 @@
     "load": [
         {
             "pid": [
-                "/news"
+                "/payment"
             ],
             "type": 4,
             "for": 0,
