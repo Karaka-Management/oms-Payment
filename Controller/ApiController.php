@@ -315,7 +315,7 @@ final class ApiController extends Controller
 
         //$stripe = new \Stripe\StripeClient($api_key);
 
-        $payload    = file_get_contents('php://input');
+        $payload    = \file_get_contents('php://input');
         $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
         $event      = null;
 
