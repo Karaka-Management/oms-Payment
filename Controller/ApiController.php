@@ -37,7 +37,7 @@ use phpOMS\Uri\HttpUri;
  * @license OMS License 2.0
  * @link    https://jingga.app
  * @since   1.0.0
- * 
+ *
  * @todo: split the different external apis into different controllers (stripe, paypal, sepa)
  */
 final class ApiController extends Controller
@@ -100,7 +100,7 @@ final class ApiController extends Controller
             $bill->setStatus(BillStatus::ARCHIVED);
 
             $account = empty($request->header->account)
-                ? (int) $bill->client?->account->getId()
+                ? (int) $bill->client?->account->id
                 : $request->header->account;
 
             $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
@@ -111,7 +111,7 @@ final class ApiController extends Controller
             $internalResponse = new HttpResponse();
 
             $internalRequest->header->account = $account;
-            $internalRequest->setData('bill', $bill->getId());
+            $internalRequest->setData('bill', $bill->id);
 
             $this->app->moduleManager->get('Billing', 'Api')->apiBillPdfArchiveCreate($internalRequest, $internalResponse);
         }
@@ -187,9 +187,9 @@ final class ApiController extends Controller
         $internalResponse = new HttpResponse();
 
         $internalRequest->header->account = $request->header->account;
-        $internalRequest->setData('type', $type->getId());
+        $internalRequest->setData('type', $type->id);
         $internalRequest->setData('custom', (string) $session->id);
-        $internalRequest->setData('bill', $bill->getId());
+        $internalRequest->setData('bill', $bill->id);
         $this->app->moduleManager->get('Billing', 'ApiAttribute')->apiBillAttributeCreate($internalRequest, $internalResponse, $data);
 
         // Redirect to stripe checkout page

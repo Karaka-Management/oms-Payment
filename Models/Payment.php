@@ -34,7 +34,7 @@ class Payment implements \JsonSerializable
      * @var int
      * @since 1.0.0
      */
-    protected int $id = 0;
+    public int $id = 0;
 
     /**
      * External type.
@@ -42,7 +42,7 @@ class Payment implements \JsonSerializable
      * @var int
      * @since 1.0.0
      */
-    private int $type = PaymentType::CREDITCARD;
+    public int $type = PaymentType::CREDITCARD;
 
     /**
      * External status.
@@ -50,7 +50,7 @@ class Payment implements \JsonSerializable
      * @var int
      * @since 1.0.0
      */
-    private int $status = PaymentStatus::ACTIVATE;
+    public int $status = PaymentStatus::ACTIVATE;
 
     /**
      * Content.
