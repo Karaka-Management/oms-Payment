@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /*
 valid origins:
@@ -38,9 +38,9 @@ uploads.stripe.com
 // You can find your endpoint's secret in your webhook settings
 $endpoint_secret = 'whsec_...';
 
-$payload = @file_get_contents('php://input');
+$payload    = @\file_get_contents('php://input');
 $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
-$event = null;
+$event      = null;
 
 try {
   $event = \Stripe\Webhook::constructEvent(
@@ -48,25 +48,25 @@ try {
   );
 } catch(\UnexpectedValueException $e) {
   // Invalid payload
-  http_response_code(400);
+  \http_response_code(400);
   exit();
 } catch(\Stripe\Exception\SignatureVerificationException $e) {
   // Invalid signature
-  http_response_code(400);
+  \http_response_code(400);
   exit();
 }
 
-function fulfill_order($line_items) {
+function fulfill_order($line_items) : void {
     // TODO: fill me in
-    error_log("Fulfilling order...");
-    error_log($line_items);
+    \error_log("Fulfilling order...");
+    \error_log($line_items);
   }
 
 // Handle the checkout.session.completed event
 if ($event->type == 'checkout.session.completed') {
     // Retrieve the session. If you require line items in the response, you may include them by expanding line_items.
     $session = \Stripe\Checkout\Session::retrieve([
-      'id' => $event->data->object->id,
+      'id'     => $event->data->object->id,
       'expand' => ['line_items'],
     ]);
 
@@ -75,7 +75,7 @@ if ($event->type == 'checkout.session.completed') {
 
     $line_items = $session->line_items;
     // Fulfill the purchase...
-    fulfill_order($line_items);
+    \fulfill_order($line_items);
   }
 
-http_response_code(200);
+\http_response_code(200);

@@ -248,11 +248,11 @@ final class ApiController extends Controller
         Autoloader::addPath($include);
 
         $stripeData = [
-            'line_items' => [],
-            'mode' => $isSubscription ? 'subscription' : 'payment',
-            'currency' => $bill->getCurrency(),
-            'success_url' => $success,
-            'cancel_url' => $cancel,
+            'line_items'          => [],
+            'mode'                => $isSubscription ? 'subscription' : 'payment',
+            'currency'            => $bill->getCurrency(),
+            'success_url'         => $success,
+            'cancel_url'          => $cancel,
             'client_reference_id' => $bill->number,
            // 'customer' => 'stripe_customer_id...',
             'customer_email' => $bill->client->account->getEmail(),
@@ -260,20 +260,20 @@ final class ApiController extends Controller
 
         foreach ($elements as $element) {
             $stripeData['line_items'][] = [
-                'quantity' => 1,
+                'quantity'   => 1,
                 'price_data' => [
                     'tax_behavior' => 'inclusive',
-                    'currency' => $bill->getCurrency(),
-                    'unit_amount' => (int) ($element->totalSalesPriceGross->getInt() / 100),
+                    'currency'     => $bill->getCurrency(),
+                    'unit_amount'  => (int) ($element->totalSalesPriceGross->getInt() / 100),
                     //'amount_subtotal' => (int) ($bill->netSales->getInt() / 100),
                     //'amount_total' => (int) ($bill->grossSales->getInt() / 100),
                     'product_data' => [
-                        'name' => $element->itemName,
+                        'name'     => $element->itemName,
                         'metadata' => [
                             'pro_id' => $element->itemNumber,
                         ],
                     ],
-                ]
+                ],
             ];
         }
 
@@ -299,7 +299,7 @@ final class ApiController extends Controller
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
-        $webhook = $_SERVER['OMS_STRIPE_WEBHOOK'] ?? '';
+        $webhook         = $_SERVER['OMS_STRIPE_WEBHOOK'] ?? '';
 
         $include = \realpath(__DIR__ . '/../../../Resources/Stripe');
 

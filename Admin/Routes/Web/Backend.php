@@ -12,11 +12,5 @@
  */
 declare(strict_types=1);
 
-use Modules\Payment\Controller\BackendController;
-use Modules\Payment\Models\PermissionCategory;
-use phpOMS\Account\PermissionType;
-use phpOMS\Router\RouteVerb;
-
 return [
-
 ];

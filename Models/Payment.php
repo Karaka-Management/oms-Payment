@@ -116,7 +116,7 @@ class Payment implements \JsonSerializable
      */
     public ?AccountExternal $externalRef = null;
 
-     /**
+    /**
      * Constructor.
      *
      * @since 1.0.0
