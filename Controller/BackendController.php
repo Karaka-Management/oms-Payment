@@ -47,7 +47,7 @@ final class BackendController extends Controller
         $view = new View($this->app->l11nManager, $request, $response);
         $view->setTemplate('/Modules/Payment/Theme/Backend/checkout-stripe');
 
-        $head = $response->get('Content')->head;
+        $head = $response->data['Content']->head;
         $head->addAsset(AssetType::CSS, 'Modules/Payment/Theme/Backend/css/styles.css');
         $head->addAsset(AssetType::JS, 'Modules/Payment/Theme/Backend/css/styles.css');
 
