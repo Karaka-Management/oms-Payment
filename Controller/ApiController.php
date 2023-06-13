@@ -25,6 +25,7 @@ use phpOMS\Autoloader;
 use phpOMS\Message\Http\HttpRequest;
 use phpOMS\Message\Http\HttpResponse;
 use phpOMS\Message\Http\RequestStatusCode;
+use phpOMS\Message\NotificationLevel;
 use phpOMS\Message\RequestAbstract;
 use phpOMS\Message\ResponseAbstract;
 use phpOMS\System\MimeType;
@@ -42,6 +43,13 @@ use phpOMS\Uri\HttpUri;
  */
 final class ApiController extends Controller
 {
+    /**
+     * Cancel a subscription
+     *
+     * @return void
+     *
+     * @since 1.0.0
+     */
     public function cancelSubscription() : void
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
@@ -176,6 +184,11 @@ final class ApiController extends Controller
     ) : void
     {
         $session = $this->createStripeSession($bill, $data['success'], $data['cancel']);
+        if ($session === null) {
+            $this->fillJsonResponse($request, $response, NotificationLevel::ERROR, 'Payment', 'Payment failed.', null);
+
+            return;
+        }
 
         // Assign payment id to bill
         /** \Modules\Billing\Models\Attribute\BillAttributeType $type */
@@ -286,6 +299,19 @@ final class ApiController extends Controller
         return $session;
     }
 
+    /**
+     * Handle API webhooks
+     *
+     * @param RequestAbstract  $request  Request
+     * @param ResponseAbstract $response Response
+     * @param mixed            $data     Generic data
+     *
+     * @return void
+     *
+     * @api
+     *
+     * @since 1.0.0
+     */
     public function apiWebhook(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
         switch($request->getData('type')) {
@@ -295,6 +321,19 @@ final class ApiController extends Controller
         }
     }
 
+    /**
+     * Handle Stripe webhooks
+     *
+     * @param RequestAbstract  $request  Request
+     * @param ResponseAbstract $response Response
+     * @param mixed            $data     Generic data
+     *
+     * @return void
+     *
+     * @api
+     *
+     * @since 1.0.0
+     */
     public function webhookStripe(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
@@ -316,18 +355,22 @@ final class ApiController extends Controller
         //$stripe = new \Stripe\StripeClient($api_key);
 
         $payload    = \file_get_contents('php://input');
-        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
+        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
         $event      = null;
 
         try {
+            if ($payload === false) {
+                throw new \UnexpectedValueException();
+            }
+
             $event = \Stripe\Webhook::constructEvent(
                 $payload, $sig_header, $webhook
             );
-        } catch(\UnexpectedValueException $e) {
+        } catch(\UnexpectedValueException $_) {
             $response->header->status = 400;
 
             return;
-        } catch(\Stripe\Exception\SignatureVerificationException $e) {
+        } catch(\Stripe\Exception\SignatureVerificationException $_) {
             $response->header->status = 400;
 
             return;
