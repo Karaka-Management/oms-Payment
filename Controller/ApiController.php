@@ -185,6 +185,7 @@ final class ApiController extends Controller
     {
         $session = $this->createStripeSession($bill, $data['success'], $data['cancel']);
         if ($session === null) {
+            $response->header->status = RequestStatusCode::R_400;
             $this->fillJsonResponse($request, $response, NotificationLevel::ERROR, 'Payment', 'Payment failed.', null);
 
             return;
