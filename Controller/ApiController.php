@@ -367,7 +367,7 @@ final class ApiController extends Controller
             $event = \Stripe\Webhook::constructEvent(
                 $payload, $sig_header, $webhook
             );
-        } catch(\UnexpectedValueException $_) {
+        } catch(\Throwable $_) {
             $response->header->status = 400;
 
             return;
