@@ -261,6 +261,11 @@ final class ApiController extends Controller
 
         Autoloader::addPath($include);
 
+        $email = $bill->client->account->getEmail();
+        if (empty($email)) {
+            throw new \InvalidArgumentException('Empty email');
+        }
+
         $stripeData = [
             'line_items'          => [],
             'mode'                => $isSubscription ? 'subscription' : 'payment',
@@ -269,7 +274,7 @@ final class ApiController extends Controller
             'cancel_url'          => $cancel,
             'client_reference_id' => $bill->number,
            // 'customer' => 'stripe_customer_id...',
-            'customer_email' => $bill->client->account->getEmail(),
+            'customer_email' => $email,
         ];
 
         foreach ($elements as $element) {
