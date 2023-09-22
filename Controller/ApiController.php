@@ -183,7 +183,7 @@ final class ApiController extends Controller
         mixed $data = null
     ) : void
     {
-        $session = $this->createStripeSession($bill, $data['success'], $data['cancel']);
+        $session = $this->createStripeSession($bill, $data['success'] ?? '', $data['cancel'] ?? '');
         if ($session === null) {
             $response->header->status = RequestStatusCode::R_400;
             $this->fillJsonResponse($request, $response, NotificationLevel::ERROR, 'Payment', 'Payment failed.', null);
@@ -261,7 +261,7 @@ final class ApiController extends Controller
 
         Autoloader::addPath($include);
 
-        $email = $bill->client->account->getEmail();
+        $email = $bill->client?->account->getEmail();
         if (empty($email)) {
             throw new \InvalidArgumentException('Empty email');
         }
@@ -373,10 +373,6 @@ final class ApiController extends Controller
                 $payload, $sig_header, $webhook
             );
         } catch(\Throwable $_) {
-            $response->header->status = 400;
-
-            return;
-        } catch(\Stripe\Exception\SignatureVerificationException $_) {
             $response->header->status = 400;
 
             return;
