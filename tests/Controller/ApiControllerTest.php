@@ -77,7 +77,7 @@ final class ControllerTest extends \PHPUnit\Framework\TestCase
         $this->app->accountManager->add($account);
         $this->app->router = new WebRouter();
 
-        $this->module = $this->app->moduleManager->get('Payment');
+        $this->module = $this->app->moduleManager->get('Payment', 'Api');
 
         TestUtils::setMember($this->module, 'app', $this->app);
     }
