@@ -35,14 +35,14 @@ final class BackendController extends Controller
      *
      * @param RequestAbstract  $request  Request
      * @param ResponseAbstract $response Response
-     * @param mixed            $data     Generic data
+     * @param array            $data     Generic data
      *
      * @return RenderableInterface Returns a renderable object
      *
      * @since 1.0.0
      * @codeCoverageIgnore
      */
-    public function viewCheckoutStripe(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : RenderableInterface
+    public function viewCheckoutStripe(RequestAbstract $request, ResponseAbstract $response, array $data = []) : RenderableInterface
     {
         $view = new View($this->app->l11nManager, $request, $response);
         $view->setTemplate('/Modules/Payment/Theme/Backend/checkout-stripe');

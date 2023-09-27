@@ -78,7 +78,7 @@ final class ApiController extends Controller
      *
      * @since 1.0.0
      */
-    public function handlePaymentRequest(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : Bill
+    public function handlePaymentRequest(RequestAbstract $request, ResponseAbstract $response, array $data = []) : Bill
     {
         /** @var \Modules\Attribute\Models\Attribute $attr */
         $attr = BillAttributeMapper::get()
@@ -170,7 +170,7 @@ final class ApiController extends Controller
      * @param RequestAbstract  $request  Request
      * @param ResponseAbstract $response Response
      * @param Bill             $bill     Bill
-     * @param mixed            $data     Generic data
+     * @param array            $data     Generic data
      *
      * @return void
      *
@@ -310,7 +310,7 @@ final class ApiController extends Controller
      *
      * @param RequestAbstract  $request  Request
      * @param ResponseAbstract $response Response
-     * @param mixed            $data     Generic data
+     * @param array            $data     Generic data
      *
      * @return void
      *
@@ -318,7 +318,7 @@ final class ApiController extends Controller
      *
      * @since 1.0.0
      */
-    public function apiWebhook(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
+    public function apiWebhook(RequestAbstract $request, ResponseAbstract $response, array $data = []) : void
     {
         switch($request->getData('type')) {
             case 'stripe':
@@ -332,7 +332,7 @@ final class ApiController extends Controller
      *
      * @param RequestAbstract  $request  Request
      * @param ResponseAbstract $response Response
-     * @param mixed            $data     Generic data
+     * @param array            $data     Generic data
      *
      * @return void
      *
@@ -340,7 +340,7 @@ final class ApiController extends Controller
      *
      * @since 1.0.0
      */
-    public function webhookStripe(RequestAbstract $request, ResponseAbstract $response, mixed $data = null) : void
+    public function webhookStripe(RequestAbstract $request, ResponseAbstract $response, array $data = []) : void
     {
         $api_key         = $_SERVER['OMS_STRIPE_SECRET'] ?? '';
         $endpoint_secret = $_SERVER['OMS_STRIPE_PUBLIC'] ?? '';
