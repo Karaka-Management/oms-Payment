@@ -209,7 +209,7 @@ final class ApiController extends Controller
         // Redirect to stripe checkout page
         $response->header->status = RequestStatusCode::R_303;
         $response->header->set('Content-Type', MimeType::M_JSON, true);
-        $response->header->set('Location', $session->url, true);
+        $response->header->set('Location', (string) $session->url, true);
     }
 
     /**
