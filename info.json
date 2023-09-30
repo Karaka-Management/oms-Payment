@@ -1,0 +1,48 @@
+{
+    "name": {
+        "id": 1001400000,
+        "internal": "Payment",
+        "external": "Payment"
+    },
+    "category": "Content",
+    "version": "1.0.0",
+    "requirements": {
+        "phpOMS": "1.0.0",
+        "phpOMS-db": "1.0.0"
+    },
+    "creator": {
+        "name": "Jingga",
+        "website": "jingga.app"
+    },
+    "description": "Payment module.",
+    "directory": "Payment",
+    "dependencies": {
+        "Admin": "1.0.0"
+    },
+    "providing": {
+        "Navigation": "*",
+        "Comments": "*",
+        "Dashboard": "*",
+        "Media": "*"
+    },
+    "load": [
+        {
+            "pid": [
+                "/payment"
+            ],
+            "type": 4,
+            "for": 0,
+            "from": "Payment",
+            "file": "Payment"
+        },
+        {
+            "pid": [
+                "/"
+            ],
+            "type": 5,
+            "from": "Payment",
+            "for": "Navigation",
+            "file": "Navigation"
+        }
+    ]
+}

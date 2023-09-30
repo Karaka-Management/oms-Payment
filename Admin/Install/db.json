@@ -1,0 +1,69 @@
+{
+    "payment": {
+        "name": "payment",
+        "fields": {
+            "payment_id": {
+                "name": "payment_id",
+                "type": "INT",
+                "null": false,
+                "primary": true,
+                "autoincrement": true
+            },
+            "payment_status": {
+                "name": "payment_status",
+                "type": "TINYINT",
+                "null": false
+            },
+            "payment_type": {
+                "name": "payment_type",
+                "type": "INT",
+                "null": false
+            },
+            "payment_content1": {
+                "name": "payment_content1",
+                "type": "VARCHAR(255)",
+                "null": false
+            },
+            "payment_content2": {
+                "name": "payment_content2",
+                "type": "VARCHAR(255)",
+                "null": false
+            },
+            "payment_content3": {
+                "name": "payment_content3",
+                "type": "VARCHAR(255)",
+                "null": false
+            },
+            "payment_content4": {
+                "name": "payment_content4",
+                "type": "VARCHAR(255)",
+                "null": false
+            },
+            "payment_content5": {
+                "name": "payment_content5",
+                "type": "VARCHAR(255)",
+                "null": false
+            },
+            "payment_created_at": {
+                "name": "payment_created_at",
+                "type": "DATETIME",
+                "null": false
+            },
+            "payment_account": {
+                "name": "payment_account",
+                "type": "INT",
+                "null": false,
+                "foreignTable": "account",
+                "foreignKey": "account_id"
+            },
+            "payment_external": {
+                "name": "payment_external",
+                "type": "INT",
+                "null": true,
+                "default": null,
+                "foreignTable": "account_external",
+                "foreignKey": "account_external_id"
+            }
+        }
+    }
+}
