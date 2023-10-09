@@ -202,7 +202,7 @@ final class ApiController extends Controller
 
         $internalRequest->header->account = $request->header->account;
         $internalRequest->setData('type', $type->id);
-        $internalRequest->setData('custom', (string) $session->id);
+        $internalRequest->setData('value', (string) $session->id);
         $internalRequest->setData('bill', $bill->id);
         $this->app->moduleManager->get('Billing', 'ApiAttribute')->apiBillAttributeCreate($internalRequest, $internalResponse, $data);
 
