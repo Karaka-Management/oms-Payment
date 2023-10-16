@@ -37,7 +37,7 @@ final class NullPaymentTest extends \PHPUnit\Framework\TestCase
     public function testId() : void
     {
         $null = new NullPayment(2);
-        self::assertEquals(2, $null->getId());
+        self::assertEquals(2, $null->id);
     }
 
     /**
