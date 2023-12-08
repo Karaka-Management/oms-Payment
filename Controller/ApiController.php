@@ -39,7 +39,7 @@ use phpOMS\Uri\HttpUri;
  * @link    https://jingga.app
  * @since   1.0.0
  *
- * @todo: split the different external apis into different controllers (stripe, paypal, sepa)
+ * @todo split the different external apis into different controllers (stripe, paypal, sepa)
  */
 final class ApiController extends Controller
 {
@@ -94,11 +94,11 @@ final class ApiController extends Controller
             ->where('id', $attr->ref)
             ->execute();
 
-        // @todo: handle different payment providers, currently only stripe handled
+        // @todo handle different payment providers, currently only stripe handled
         // idea: add a second attribute which defines the external_payment_provider, or use 2 values in the attribute e.g. valueInt contains the type of the payment provider?
         $status = $this->getStripePaymentStatus($request->getDataString('session_id') ?? '');
 
-        // @todo: consider to have the bill as an offer and now turn it into an invoice. currently it's an invoice and now we need to update it instead of transfer it to an invoice
+        // @todo consider to have the bill as an offer and now turn it into an invoice. currently it's an invoice and now we need to update it instead of transfer it to an invoice
         if ($status === BillPaymentStatus::PAID
             && $bill->getPaymentStatus() !== BillPaymentStatus::PAID
         ) {
@@ -113,7 +113,7 @@ final class ApiController extends Controller
 
             $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
 
-            // @todo: move this out of here. This is only a special case.
+            // @todo move this out of here. This is only a special case.
             // Even the temp implememntation is bad, as this should happen async in the Cli
             $internalRequest  = new HttpRequest(new HttpUri(''));
             $internalResponse = new HttpResponse();
@@ -299,7 +299,7 @@ final class ApiController extends Controller
         //$stripe = new \Stripe\StripeClient($api_key);
         \Stripe\Stripe::setApiKey($api_key);
 
-        // @todo: instead of using account email, use client billing email if defined and only use account email as fallback
+        // @todo instead of using account email, use client billing email if defined and only use account email as fallback
         $session = \Stripe\Checkout\Session::create($stripeData);
 
         return $session;
@@ -518,7 +518,7 @@ final class ApiController extends Controller
                 $subscription = $event->data->object;
                 break;
             case 'customer.subscription.deleted':
-                // @todo: subscription ended
+                // @todo subscription ended
                 $subscription = $event->data->object;
                 break;
             case 'customer.subscription.paused':
@@ -539,7 +539,7 @@ final class ApiController extends Controller
             case 'customer.subscription.updated':
                 $subscription = $event->data->object;
 
-                // @todo: create invoice
+                // @todo create invoice
                 // check if permissions and settings need to be changed
                 break;
             case 'customer.tax_id.created':
@@ -603,14 +603,14 @@ final class ApiController extends Controller
                 $invoice = $event->data->object;
                 break;
             case 'invoice.paid':
-                // @todo: this is when a subscription is paid
+                // @todo this is when a subscription is paid
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_action_required':
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_failed':
-                // @todo: change subscription
+                // @todo change subscription
                 $invoice = $event->data->object;
                 break;
             case 'invoice.payment_succeeded':
@@ -704,7 +704,7 @@ final class ApiController extends Controller
                 $paymentIntent = $event->data->object;
                 break;
             case 'payment_intent.succeeded':
-                // @todo: received payment (maybe the best solution for checking also subscriptions)
+                // @todo received payment (maybe the best solution for checking also subscriptions)
 
                 // get item id
                 // find item which has this id

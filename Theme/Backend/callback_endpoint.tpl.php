@@ -70,8 +70,8 @@ if ($event->type == 'checkout.session.completed') {
       'expand' => ['line_items'],
     ]);
 
-    // @todo: find bill with this session id
-    // @todo: send bill as pdf
+    // @todo find bill with this session id
+    // @todo send bill as pdf
 
     $line_items = $session->line_items;
     // Fulfill the purchase...
