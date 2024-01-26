@@ -29,7 +29,6 @@ use phpOMS\Message\NotificationLevel;
 use phpOMS\Message\RequestAbstract;
 use phpOMS\Message\ResponseAbstract;
 use phpOMS\System\MimeType;
-use phpOMS\Uri\HttpUri;
 
 /**
  * Payment controller class.
@@ -39,7 +38,7 @@ use phpOMS\Uri\HttpUri;
  * @link    https://jingga.app
  * @since   1.0.0
  *
- * @todo split the different external apis into different controllers (stripe, paypal, sepa)
+ * @todo split the different external apis into different controllers (stripe, paypal, SEPA)
  */
 final class ApiController extends Controller
 {
@@ -104,8 +103,8 @@ final class ApiController extends Controller
         ) {
             $old = clone $bill;
 
-            $bill->setPaymentStatus(BillPaymentStatus::PAID);
-            $bill->setStatus(BillStatus::ARCHIVED);
+            $bill->paymentStatus = BillPaymentStatus::PAID;
+            $bill->status        = BillStatus::ARCHIVED;
 
             $account = empty($request->header->account)
                 ? (int) $bill->client?->account->id
@@ -114,14 +113,14 @@ final class ApiController extends Controller
             $this->updateModel($account, $old, $bill, BillMapper::class, 'bill_payment', $request->getOrigin());
 
             // @todo move this out of here. This is only a special case.
-            // Even the temp implememntation is bad, as this should happen async in the Cli
-            $internalRequest  = new HttpRequest(new HttpUri(''));
+            // Even the temp implementation is bad, as this should happen async in the Cli
+            $internalRequest  = new HttpRequest();
             $internalResponse = new HttpResponse();
 
             $internalRequest->header->account = $account;
             $internalRequest->setData('bill', $bill->id);
 
-            $this->app->moduleManager->get('Billing', 'Api')->apiBillPdfArchiveCreate($internalRequest, $internalResponse);
+            $this->app->moduleManager->get('Billing', 'ApiBill')->apiBillPdfArchiveCreate($internalRequest, $internalResponse);
         }
 
         return $bill;
@@ -197,7 +196,7 @@ final class ApiController extends Controller
             ->where('name', 'external_payment_id')
             ->execute();
 
-        $internalRequest  = new HttpRequest(new HttpUri(''));
+        $internalRequest  = new HttpRequest();
         $internalResponse = new HttpResponse();
 
         $internalRequest->header->account = $request->header->account;
@@ -246,7 +245,7 @@ final class ApiController extends Controller
         }
 
         $isSubscription = false;
-        $elements       = $bill->getElements();
+        $elements       = $bill->elements;
 
         foreach ($elements as $element) {
             $item = ItemMapper::get()
@@ -269,7 +268,7 @@ final class ApiController extends Controller
         $stripeData = [
             'line_items'          => [],
             'mode'                => $isSubscription ? 'subscription' : 'payment',
-            'currency'            => $bill->getCurrency(),
+            'currency'            => $bill->currency,
             'success_url'         => $success,
             'cancel_url'          => $cancel,
             'client_reference_id' => $bill->number,
@@ -282,7 +281,7 @@ final class ApiController extends Controller
                 'quantity'   => 1,
                 'price_data' => [
                     'tax_behavior' => 'inclusive',
-                    'currency'     => $bill->getCurrency(),
+                    'currency'     => $bill->currency,
                     'unit_amount'  => (int) ($element->totalSalesPriceGross->getInt() / 100),
                     //'amount_subtotal' => (int) ($bill->netSales->getInt() / 100),
                     //'amount_total' => (int) ($bill->grossSales->getInt() / 100),
