@@ -48,8 +48,8 @@ final class BackendController extends Controller
         $view->setTemplate('/Modules/Payment/Theme/Backend/checkout-stripe');
 
         $head = $response->data['Content']->head;
-        $head->addAsset(AssetType::CSS, 'Modules/Payment/Theme/Backend/css/styles.css');
-        $head->addAsset(AssetType::JS, 'Modules/Payment/Theme/Backend/css/styles.css');
+        $head->addAsset(AssetType::CSS, 'Modules/Payment/Theme/Backend/css/styles.css?v=' . self::VERSION);
+        $head->addAsset(AssetType::JS, 'Modules/Payment/Theme/Backend/css/styles.css?v=' . self::VERSION);
 
         return $view;
     }
