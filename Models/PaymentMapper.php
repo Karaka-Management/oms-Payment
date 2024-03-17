@@ -14,7 +14,7 @@ declare(strict_types=1);
 
 namespace Modules\Payment\Models;
 
-use Modules\Admin\Models\AccountExternal;
+use Modules\Admin\Models\AccountExternalMapper;
 use phpOMS\DataStorage\Database\Mapper\DataMapperFactory;
 
 /**
@@ -57,9 +57,9 @@ class PaymentMapper extends DataMapperFactory
      * @since 1.0.0
      */
     public const OWNS_ONE = [
-        'external' => [
-            'mapper'   => AccountExternal::class,
-            'external' => 'account_localization',
+        'externalRef' => [
+            'mapper'   => AccountExternalMapper::class,
+            'external' => 'payment_external',
         ],
     ];
 
