@@ -19,31 +19,23 @@ use Modules\Payment\Models\NullPayment;
 /**
  * @internal
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\Modules\Payment\Models\NullPayment::class)]
 final class NullPaymentTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @covers \Modules\Payment\Models\NullPayment
-     * @group module
-     */
+    #[\PHPUnit\Framework\Attributes\Group('module')]
     public function testNull() : void
     {
         self::assertInstanceOf('\Modules\Payment\Models\Payment', new NullPayment());
     }
 
-    /**
-     * @covers \Modules\Payment\Models\NullPayment
-     * @group module
-     */
+    #[\PHPUnit\Framework\Attributes\Group('module')]
     public function testId() : void
     {
         $null = new NullPayment(2);
         self::assertEquals(2, $null->id);
     }
 
-    /**
-     * @covers \Modules\Payment\Models\NullPayment
-     * @group module
-     */
+    #[\PHPUnit\Framework\Attributes\Group('module')]
     public function testJsonSerialize() : void
     {
         $null = new NullPayment(2);
