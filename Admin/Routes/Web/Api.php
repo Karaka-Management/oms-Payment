@@ -20,7 +20,7 @@ return [
             'dest'       => '\Modules\Payment\Controller\ApiController:apiWebhook',
             'verb'       => RouteVerb::ANY,
             'csrf'       => true,
-            'active' => true,
+            'active'     => true,
             'permission' => [
             ],
         ],
