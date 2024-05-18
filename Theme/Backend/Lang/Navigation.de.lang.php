@@ -16,5 +16,4 @@ return ['Navigation' => [
     'Archive' => 'Archiv',
     'Create'  => 'Erstellen',
     'Draft'   => 'Entwurf',
-    'News'    => 'News',
 ]];

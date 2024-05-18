@@ -13,5 +13,4 @@
 declare(strict_types=1);
 
 return ['Payment' => [
-    'Accounts/Groups' => 'Accounts/Groups',
 ]];
